@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Your Request | COLM Registrar</title>
+<meta name="description" content="Track the status of your COLM document request.">
+<link rel="icon" href="assets/images/colm_logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/landing.css?v=34">
+<script>
+try { if (localStorage.getItem("colmTheme") === "dark") document.documentElement.classList.add("dark"); } catch (error) {}
+</script>
+<style>
+.track-panel{min-height:100vh;scroll-margin-top:0}
+</style>
+</head>
+<body>
+<main class="track-panel-shell">
+  <section class="track-panel" id="track" aria-labelledby="trackTitle">
+    <div class="track-window">
+      <div class="track-topbar">
+        <img src="assets/images/colm_registrar_logo.png" alt="COLM Registrar" class="track-seal">
+      </div>
+      <div class="track-head">
+        <h2 id="trackTitle">Track Your Request</h2>
+        <p class="track-number" id="trackSubtitle">Enter your tracking number to see where your request is.</p>
+        <p class="track-requested-at" id="trackRequestedAt" hidden></p>
+      </div>
+      <form class="track-lookup" id="trackForm" novalidate>
+        <div class="track-input-row">
+          <input id="trackRefInput" type="text" placeholder="Enter your reference number" aria-label="Reference number" autocomplete="off">
+          <button type="submit" class="btn fill" id="trackLookupBtn">Track</button>
+        </div>
+        <p id="trackLookupMsg" class="track-lookup-msg" aria-live="polite"></p>
+      </form>
+      <div class="track-card is-empty" id="trackCard">
+        <div class="timeline" id="statusTimeline"></div>
+        <aside class="track-details" id="trackDetails" aria-live="polite"></aside>
+      </div>
+      <div class="updated-row"><span>Updated:</span><time id="trackUpdated">—</time></div>
+    </div>
+  </section>
+</main>
+<script src="js/track.js?v=3"></script>
+</body>
+</html>
