@@ -42,6 +42,29 @@ function active_student_academic_year($studentNo) {
     return trim((string)($record['academic_year'] ?? ''));
 }
 
+function current_enrollment_masterlist_record($studentNo) {
+    $studentNo = trim((string)$studentNo);
+    if ($studentNo === '') return null;
+    return fetch_one("SELECT v.student_no, v.student_name, v.course, v.year_level, v.validation_status, v.validation_note,
+                             m.academic_year, m.semester, m.period_key
+                      FROM validation_records v
+                      JOIN master_list_imports m ON m.id = v.import_id
+                      WHERE v.student_no = ? AND m.academic_year = ? AND m.status = 'ACTIVE'
+                      ORDER BY m.period_key DESC, v.id DESC
+                      LIMIT 1", [$studentNo, current_academic_year()]);
+}
+
+function current_enrollment_masterlist_problem($studentNo) {
+    $record = current_enrollment_masterlist_record($studentNo);
+    if (!$record) return 'Your current enrollment is not verified on the active Masterlist for A.Y. ' . current_academic_year() . '. Please contact the Registrar.';
+    if ($record['validation_status'] !== 'VALIDATED') {
+        return 'Your active Masterlist record could not be validated'
+            . ($record['validation_note'] ? ': ' . $record['validation_note'] : '.')
+            . ' Please contact the Registrar.';
+    }
+    return '';
+}
+
 function master_imports_to_archive(array $imports, $currentAcademicYear) {
     $currentStart = (int)substr((string)$currentAcademicYear, 0, 4);
     return array_values(array_filter($imports, fn($import) =>

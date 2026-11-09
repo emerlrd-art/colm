@@ -457,6 +457,10 @@ function student_verification_result($input, $student) {
     $course = credential_form_value($input, 'course_program', 100);
     $academicYear = credential_form_value($input, 'academic_year', 9);
     $gradeLevel = credential_form_value($input, 'grade_level', 40);
+    $masterlistRecord = null;
+    if (($student['status'] ?? '') === 'currently_enrolled') {
+        $masterlistRecord = current_enrollment_masterlist_record($student['student_no'] ?? '');
+    }
     $profileId = credential_form_value($student, 'student_no', 30);
     if ($profileId === '') $profileId = credential_form_value($student, 'username', 50);
     $profileName = credential_form_value($student, 'full_name', 120);
@@ -465,6 +469,13 @@ function student_verification_result($input, $student) {
     $profileGrade = !empty($student['year_level'])
         ? year_label($student['school_level'] ?? '', (int)$student['year_level'], $profileCourse)
         : '';
+    if (($student['status'] ?? '') === 'currently_enrolled' && $masterlistRecord) {
+        $profileId = $masterlistRecord['student_no'];
+        $profileName = $masterlistRecord['student_name'];
+        $profileCourse = $masterlistRecord['course'];
+        $profileYear = $masterlistRecord['academic_year'];
+        $profileGrade = year_label($student['school_level'] ?? '', (int)$masterlistRecord['year_level'], $profileCourse);
+    }
 
     $normalize = fn($value) => mb_strtolower(preg_replace('/\s+/', ' ', trim($value)));
     $schoolYear = [];
@@ -513,6 +524,15 @@ function student_verification_result($input, $student) {
                     : ($profileGrade !== '' ? 'Matches your student profile.' : 'No grade level is set in your profile to compare.')),
         ],
     ];
+    if (($student['status'] ?? '') === 'currently_enrolled') {
+        $listProblem = current_enrollment_masterlist_problem($student['student_no'] ?? '');
+        $checks[] = [
+            'field' => 'Current Enrollment Masterlist',
+            'passed' => $listProblem === '',
+            'result' => $listProblem === '' ? 'Matches the active Masterlist for ' . $masterlistRecord['academic_year'] . '.'
+                : $listProblem,
+        ];
+    }
     $verified = !array_filter($checks, fn($check) => !$check['passed']);
     if (!$verified) return ['verified' => false, 'checks' => $checks, 'form' => null];
 
@@ -563,7 +583,12 @@ function verify_student_form_action($user) {
                           FROM students s JOIN users u ON u.id = s.user_id WHERE s.user_id = ?', [$user['id']]);
     if (!$student) fail('Student profile not found.', 404);
     if (($student['status'] ?? '') === 'currently_enrolled') {
-        $student['academic_year'] = active_student_academic_year($student['student_no']) ?: $student['academic_year'];
+        $listProblem = current_enrollment_masterlist_problem($student['student_no']);
+        if ($listProblem !== '') fail($listProblem, 422);
+        $masterlistRecord = current_enrollment_masterlist_record($student['student_no']);
+        $student['academic_year'] = $masterlistRecord['academic_year'];
+        $student['course'] = $masterlistRecord['course'];
+        $student['year_level'] = (int)$masterlistRecord['year_level'];
     }
     $result = student_verification_result($input['student_verification_form'] ?? null, $student);
     json_response(['ok' => true, 'verified' => $result['verified'], 'form' => $result['form'], 'checks' => $result['checks']]);
@@ -594,7 +619,12 @@ function create_request($user) {
                                  u.student_no, u.username, u.full_name
                           FROM students s JOIN users u ON u.id = s.user_id WHERE s.user_id = ?', [$user['id']]);
     if ($student && ($student['status'] ?? '') === 'currently_enrolled') {
-        $student['academic_year'] = active_student_academic_year($student['student_no']) ?: $student['academic_year'];
+        $listProblem = current_enrollment_masterlist_problem($student['student_no']);
+        if ($listProblem !== '') fail($listProblem, 422);
+        $masterlistRecord = current_enrollment_masterlist_record($student['student_no']);
+        $student['academic_year'] = $masterlistRecord['academic_year'];
+        $student['course'] = $masterlistRecord['course'];
+        $student['year_level'] = (int)$masterlistRecord['year_level'];
     }
 
     $releaseMethod = $payload['release_method'] ?? '';
